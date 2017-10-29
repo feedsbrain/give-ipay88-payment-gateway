@@ -26,7 +26,7 @@ function check_give_plugin_dependency() {
     }
 }
 function give_plugin_notification(){
-    ?><div class="error"><p>Sorry, but <strong>Give iPay88 Payment Gateway</strong> requires the <strong>Give - Donation Plugin</strong> to be installed and active.</p></div><?php
+    ?><div class="error"><p>Sorry, but <strong>Give iPay88 Payment Gateway</strong> requires the <strong><a href="/wp-admin/plugin-install.php?tab=plugin-information&plugin=give">Give - Donation Plugin</a></strong> to be installed and active.</p></div><?php
 }
 add_action( 'admin_init', 'check_give_plugin_dependency' );
 /* End of Plugin Dependencies */
@@ -40,6 +40,18 @@ function give_ipay88_payment_gateway_activation( $links, $file ) {
 }
 add_filter( 'plugin_action_links', 'give_ipay88_payment_gateway_activation', 10, 2 );
 /* End of Disabled Plugin Activation Link */
+
+/* Payment Gateway Section */
+function add_ipay88_payment_gateway($gateways)
+{
+    $gateways['ipay88'] = array(
+        'admin_label'    => __( 'iPay88', 'give' ),
+        'checkout_label' => __( 'iPay88', 'give' ),
+    );
+    return $gateways;
+}
+add_filter( 'give_payment_gateways', 'add_ipay88_payment_gateway');
+/* End of Payment Gateway Section */
 
 /* Gateway Section */
 function add_ipay88_gateway_section($sections)
@@ -101,3 +113,18 @@ function add_ipay88_gateway_settings($settings)
 }
 add_filter( 'give_get_settings_gateways', 'add_ipay88_gateway_settings');
 /* End of Gateway Settings */
+
+/* iPay88 Billing Details Form */
+function give_ipay88_standard_billing_fields( $form_id ) {
+    
+    if ( give_is_setting_enabled( give_get_option( 'ipay88_billing_details' ) ) ) {
+        give_default_cc_address_fields( $form_id );
+
+        return true;
+    }
+
+    return false;
+
+}
+add_action( 'give_ipay88_cc_form', 'give_ipay88_standard_billing_fields' );
+/* End of iPay88 Billing Details Form */
