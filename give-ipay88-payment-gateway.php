@@ -167,6 +167,15 @@ function give_ipay88_standard_billing_fields( $form_id ) {
 }
 add_action( 'give_ipay88_cc_form', 'give_ipay88_standard_billing_fields' );
 /* End of iPay88 Billing Details Form */
+
+/* Create Payment Data */
+function create_ipay88_payment_data($insert_payment_data)
+{
+    $insert_payment_data['gateway'] = 'ipay88';
+    return $insert_payment_data;
+}
+add_filter( 'give_create_payment', 'create_ipay88_payment_data');
+/* End of Create Payment Data */
  
 /* Process iPay88 Payment */
 function give_process_ipay88_payment($payment_data)
@@ -288,7 +297,19 @@ function construct_form_and_post($payment_id, $payment_data) {
 function give_ipay88_success_page_content( $content ) {
     write_log('-- PROCESSING RESPONSE --');
     write_log('Response Content:');
-    write_log($content);
+    write_log($_REQUEST);
+
+    $merchantcode = $_REQUEST["MerchantCode"];
+    $paymentid = $_REQUEST["PaymentId"];
+    $refno = $_REQUEST["RefNo"];
+    $amount = $_REQUEST["Amount"];
+    $ecurrency = $_REQUEST["Currency"];
+    $remark = $_REQUEST["Remark"];
+    $transid = $_REQUEST["TransId"];
+    $authcode = $_REQUEST["AuthCode"];
+    $estatus = $_REQUEST["Status"];
+    $errdesc = $_REQUEST["ErrDesc"];
+    $signature = $_REQUEST["Signature"];
 
     if (!isset( $_GET['payment-id'] ) && ! give_get_purchase_session() ) {
         return $content;
@@ -305,6 +326,21 @@ function give_ipay88_success_page_content( $content ) {
         give_get_template_part( 'payment', 'processing' );
         $content = ob_get_clean();
     }
+    write_log('Processing Status from iPay88 ...');
+    if ($estatus === 1) {
+        //TODO: COMPARE Return Signature with Generated Response Signature
+        write_log('Logging Success: Payment ID = ' . $payment_id . ' successful ...');
+        give_set_payment_transaction_id( $payment_id, $transid );
+        give_update_payment_status( $payment_id, 'publish' );
+    }
+    else {
+        write_log('Logging Error: Payment ID = ' . $payment_id . ', Error = ' . $errdesc);
+        give_record_gateway_error( __( 'iPay88 Error', 'give' ), sprintf(__( $errdesc, 'give' ), json_encode( $_REQUEST ) ), $payment_id );
+        give_set_payment_transaction_id( $payment_id, $transid );
+		give_update_payment_status( $payment_id, 'failed' );
+		give_insert_payment_note( $payment_id, __( $errdesc, 'give' ) );
+    }
+   
     return $content;
 }
 add_filter('give_payment_confirm_ipay88', 'give_ipay88_success_page_content');
