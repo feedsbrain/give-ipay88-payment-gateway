@@ -329,6 +329,11 @@ function give_ipay88_success_page_content( $content ) {
     write_log('Processing Status from iPay88 ...');
     if ($estatus === 1) {
         //TODO: COMPARE Return Signature with Generated Response Signature
+        $requery = requery($merchantcode, $refno, $amount);    
+
+        write_log('iPay88 Requery Result:');
+        write_log($requery);
+        
         write_log('Logging Success: Payment ID = ' . $payment_id . ' successful ...');
         give_set_payment_transaction_id( $payment_id, $transid );
         give_update_payment_status( $payment_id, 'publish' );
@@ -433,3 +438,29 @@ function give_required_phone_number($required_fields)
 }
 add_filter( 'give_donation_form_required_fields', 'give_required_phone_number');
 /* End of Make Phone Number Field Required */
+
+/* iPay88 Requery Function */
+function requery($merchant_code, $ref_no, $amount){
+    $query = "https://www.mobile88.com/epayment/enquiry.asp?MerchantCode=" . $merchant_code . "&RefNo=" . $ref_no . "&Amount=" . $amount;
+    
+    $url = parse_url($query);
+    $host = $url["host"];
+    $path = $url["path"] . "?" . $url["query"];
+    $timeout = 1;
+    $fp = fsockopen ($host, 80, $errno, $errstr, $timeout);
+   
+    if ($fp) {
+        fputs ($fp, "GET $path HTTP/1.0\nHost: " . $host . "\n\n");
+        while (!feof($fp)) {
+            $buf .= fgets($fp, 128);
+        }
+        $lines = preg_split("\n", $buf);
+        $result = $lines[count($lines)-1];
+        fclose($fp);
+    } else {
+        # enter error handing code here
+    }
+    
+    return $result;
+}
+/* End of iPay88 Requery Function */
